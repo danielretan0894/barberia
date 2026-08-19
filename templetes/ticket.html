@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Imprimir Ticket</title>
+    <style>
+        body { font-family: 'Courier New', Courier, monospace; width: 250px; margin: 0 auto; padding: 10px; }
+        h2, p { text-align: center; margin: 5px 0; }
+        .line { border-top: 1px dashed black; margin: 10px 0; }
+        .total { font-size: 18px; font-weight: bold; border-top: 2px solid black; padding-top: 5px; }
+    </style>
+</head>
+<body onload="window.print(); window.location.href='/pos';">
+    <h2>BARBER PRO</h2>
+    <p>{{ fecha }}</p>
+    <div class="line"></div>
+    <p><strong>Articulo/Serv:</strong> {{ servicio }}</p>
+    <p><strong>Atendió:</strong> {{ barbero }}</p>
+    <div class="line"></div>
+    <p>Precio: ${{ precio }}</p>
+    <p>Propina: ${{ propina }}</p>
+    <p class="total">TOTAL: ${{ total }}</p>
+    <div class="line"></div>
+    <p>¡Gracias por tu compra!</p>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Barber Pro - Clientes</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { display: flex; height: 100vh; background-color: #f4f7f6; color: #333; overflow: hidden; }
+        
+        /* Barra lateral (fija) */
+        .sidebar { width: 250px; background-color: #1e293b; color: white; padding: 20px; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar h2 { margin-bottom: 30px; font-size: 20px; text-align: center; }
+        .menu { list-style: none; }
+        .menu li { padding: 15px; margin-bottom: 10px; border-radius: 8px; cursor: pointer; transition: background 0.3s; }
+        .menu li:hover, .menu li.active { background-color: #334155; font-weight: bold; }
+        
+        /* Contenido principal */
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        header { border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 30px; }
+        .section { background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .list { list-style: none; }
+        .list li { padding: 15px 0; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+    <!-- MENÚ LATERAL -->
+    <div class="sidebar">
+        <h2>💈 {{ session.get('nombre_barberia', 'BARBER PRO') }}</h2>
+        <ul class="menu">
+            <a href="/" style="text-decoration: none; color: inherit;"><li>📌 Inicio</li></a>
+            
+            {% if session.get('rol') in ['admin', 'cajero'] %}
+                <a href="/pos" style="text-decoration: none; color: inherit;"><li>🛒 Punto de Venta</li></a>
+            {% endif %}
+            
+            <a href="/agenda" style="text-decoration: none; color: inherit;"><li>📅 Agenda</li></a>
+            <a href="/clientes" style="text-decoration: none; color: inherit;"><li class="active">👥 Clientes</li></a>
+            
+            {% if session.get('rol') == 'admin' %}
+                <a href="/inventario" style="text-decoration: none; color: inherit;"><li>📦 Inventario</li></a>
+                <a href="/finanzas" style="text-decoration: none; color: inherit;"><li>💰 Finanzas</li></a>
+                <a href="/ajustes" style="text-decoration: none; color: inherit;"><li>⚙️ Ajustes</li></a>
+            {% endif %}
+            <br><a href="/logout" style="text-decoration: none; color: #fca5a5;"><li>🚪 Cerrar Sesión</li></a>
+        </ul>
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="main-content">
+        <header><h1>Directorio de Clientes</h1></header>
+        <div class="section">
+            <h2>👥 Mis Clientes Registrados</h2>
+            <ul class="list">
+                {% if clientes_python %}
+                    {% for cliente in clientes_python %}
+                    <li>
+                        <span><strong>👤 {{ cliente[0] }}</strong></span>
+                        <span>⭐ Puntos: <strong>{{ db.obtener_puntos(session['id_negocio'], cliente[0]) }}</strong> | 📞 {{ cliente[1] }}</span>
+                    </li>
+                    {% endfor %}
+                {% else %}
+                    <li><span>Aún no hay clientes registrados.</span></li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

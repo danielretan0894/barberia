@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Barber Pro - Seleccionar Sucursal</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; color: #333; }
+        .card { background: white; padding: 40px; border-radius: 12px; width: 420px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; }
+        .card h2 { color: #0f172a; margin-bottom: 10px; font-size: 24px; }
+        .card p { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .btn-sucursal { display: block; width: 100%; padding: 14px; margin-bottom: 12px; background-color: #f8fafc; border: 2px solid #cbd5e1; border-radius: 8px; font-size: 16px; font-weight: bold; color: #1e293b; cursor: pointer; transition: all 0.3s; text-align: left; padding-left: 20px; }
+        .btn-sucursal:hover { background-color: #2563eb; color: white; border-color: #2563eb; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>💈 Selecciona una Sucursal</h2>
+        <p>Tu cuenta administra varios locales. ¿Cuál deseas gestionar hoy?</p>
+        
+        <form action="/seleccionar_sucursal" method="POST">
+            {% for s in sucursales %}
+            <button type="submit" name="id_negocio" value="{{ s[1] }}" class="btn-sucursal">
+                📍 {{ s[2] }} <span style="font-size: 12px; color: #64748b; float: right; margin-top: 3px;">({{ s[0] }})</span>
+            </button>
+            {% endfor %}
+        </form>
+    </div>
+</body>
+</html>

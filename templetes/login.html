@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Barber Pro - Iniciar Sesión</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .login-card { background: white; padding: 40px; border-radius: 12px; width: 380px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .login-card h2 { color: #0f172a; margin-bottom: 5px; font-size: 24px; }
+        .login-card p { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .login-card label { display: block; margin-bottom: 5px; color: #475569; font-weight: bold; font-size: 14px; }
+        .login-card input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; }
+        .btn-login { width: 100%; padding: 12px; background-color: #2563eb; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; transition: background 0.3s; }
+        .btn-login:hover { background-color: #1d4ed8; }
+        .demo-link { display: block; text-align: center; margin-top: 15px; text-decoration: none; color: #64748b; font-size: 14px; }
+        .demo-link:hover { color: #2563eb; text-decoration: underline; }
+        .error-msg { background-color: #fee2e2; color: #991b1b; padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 15px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <h2>💈 BARBER PRO</h2>
+        <p>Ingresa tus credenciales para acceder</p>
+
+        {% if error %}
+        <div class="error-msg">{{ error }}</div>
+        {% endif %}
+
+        <form action="/login" method="POST">
+            <label>Usuario</label>
+            <input type="text" name="usuario" placeholder="Ej. admin" required>
+
+            <label>Contraseña</label>
+            <input type="password" name="password" placeholder="••••••••" required>
+
+            <button type="submit" class="btn-login">Entrar al Sistema</button>
+        </form>
+
+        <a href="/login_demo" class="demo-link">🚀 Probar Sistema (Demo)</a>
+    </div>
+
+</body>
+</html>

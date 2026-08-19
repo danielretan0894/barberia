@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Barber Pro - Finanzas</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { display: flex; height: 100vh; background-color: #f4f7f6; color: #333; overflow: hidden; }
+        .sidebar { width: 250px; background-color: #1e293b; color: white; padding: 20px; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar h2 { margin-bottom: 30px; font-size: 20px; text-align: center; }
+        .menu { list-style: none; }
+        .menu li { padding: 15px; margin-bottom: 10px; border-radius: 8px; cursor: pointer; transition: background 0.3s; }
+        .menu li:hover, .menu li.active { background-color: #334155; font-weight: bold; }
+        
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px;}
+        
+        .cards-container { display: flex; gap: 20px; margin-bottom: 30px; }
+        .card { background-color: white; flex: 1; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-left: 5px solid #10b981; }
+        .card h3 { color: #64748b; font-size: 16px; margin-bottom: 5px; }
+        .card .number { font-size: 36px; font-weight: bold; color: #0f172a; margin: 10px 0; }
+        
+        .charts-container { display: flex; gap: 20px; margin-bottom: 30px; }
+        .chart-box { background: white; flex: 1; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
+        .chart-box h3 { margin-bottom: 15px; color: #475569; font-size: 16px; }
+
+        .section { background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .section h2 { margin-bottom: 20px; font-size: 18px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; }
+        .list { list-style: none; }
+        .list li { padding: 15px 0; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; }
+        .history-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .history-table th, .history-table td { padding: 12px; text-align: left; border-bottom: 1px solid #f1f5f9; }
+        .history-table th { background-color: #f8fafc; color: #475569; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>💈 {{ session.get('nombre_barberia', 'BARBER PRO') }}</h2>
+        <ul class="menu">
+            <a href="/" style="text-decoration: none; color: inherit;"><li>📌 Inicio</li></a>
+            <a href="/pos" style="text-decoration: none; color: inherit;"><li>🛒 Punto de Venta</li></a>
+            <a href="/agenda" style="text-decoration: none; color: inherit;"><li>📅 Agenda</li></a>
+            <a href="/clientes" style="text-decoration: none; color: inherit;"><li>👥 Clientes</li></a>
+            {% if session.get('rol') == 'admin' %}
+                <a href="/inventario" style="text-decoration: none; color: inherit;"><li>📦 Inventario</li></a>
+                <a href="/finanzas" style="text-decoration: none; color: inherit;"><li class="active">💰 Finanzas</li></a>
+                <a href="/ajustes" style="text-decoration: none; color: inherit;"><li>⚙️ Ajustes</li></a>
+            {% endif %}
+            <br><a href="/logout" style="text-decoration: none; color: #fca5a5;"><li>🚪 Cerrar Sesión</li></a>
+        </ul>
+    </div>
+    
+    <div class="main-content">
+        <header><h1>Dashboard Financiero y Contabilidad</h1></header>
+        
+        <div class="cards-container">
+            <div class="card">
+                <h3>💰 Balance Real Total</h3>
+                <p style="font-size: 12px; color: gray;">(Ingresos Netos - Egresos - Nómina Pendiente)</p>
+                <p class="number">${{ balance_python }}</p>
+                <div style="display:flex; justify-content: space-around; margin-top: 15px; font-size: 15px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+                    <span style="color: #059669;"><strong>💵 En Cajón Físico:</strong> ${{ efectivo_python }}</span>
+                    <span style="color: #0284c7;"><strong>💳 En Banco:</strong> ${{ banco_python }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-container">
+            <div class="chart-box">
+                <h3>📊 Distribución de Ingresos por Método de Pago</h3>
+                <div style="width: 220px; margin: 0 auto;">
+                    <canvas id="metodosPagoChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-box">
+                <h3>✂️ Producción por Barbero ($ Servicios)</h3>
+                <div style="width: 280px; margin: 0 auto;">
+                    <canvas id="barberosChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="section" style="border-left: 5px solid #3b82f6;">
+            <h2>📝 Registrar Movimiento Manual</h2>
+            <form action="/nueva_transaccion" method="POST" style="display: flex; gap: 10px; margin-top: 15px; align-items: center;">
+                <select name="tipo_transaccion" required style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 5px; flex: 1;">
+                    <option value="egreso">🔴 Gasto (Insumos, Luz...)</option>
+                    <option value="ingreso">🟢 Ingreso Extra</option>
+                </select>
+                <select name="metodo_pago" required style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 5px; flex: 1;">
+                    <option value="Efectivo">💵 Del Cajón Físico</option>
+                    <option value="Transferencia">📱 De Tarjeta/Banco</option>
+                </select>
+                <input type="text" name="descripcion_transaccion" placeholder="Descripción..." required style="padding: 10px; flex: 2; border: 1px solid #cbd5e1; border-radius: 5px;">
+                <input type="number" step="0.01" name="monto_transaccion" placeholder="Monto ($)" required style="padding: 10px; flex: 1; border: 1px solid #cbd5e1; border-radius: 5px;">
+                <button type="submit" style="padding: 10px 20px; background-color: #3b82f6; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Guardar</button>
+            </form>
+        </div>
+
+        <div class="section" style="border-left: 5px solid #8b5cf6;">
+            <h2>✂️ Nómina (Cálculo Automático a pagar)</h2>
+            <ul class="list">
+                {% if reporte_barberos %}
+                    {% for barbero in reporte_barberos %}
+                    {% set porcentaje = barbero[4] | float %}
+                    {% set total_serv = barbero[2] | float %}
+                    {% set total_prop = barbero[3] | float %}
+                    {% set comision_dinero = (total_serv * (porcentaje / 100)) %}
+                    {% set total_pago = comision_dinero + total_prop %}
+                    <li style="display: flex; flex-direction: column; gap: 5px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>👤 <strong>{{ barbero[0] }}</strong> ({{ barbero[1] }} tickets)</span>
+                            <span style="font-weight: bold; color: #8b5cf6; font-size: 18px;">Total a Pagar: ${{ total_pago | round(2) }}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 14px; color: #64748b;">
+                            <span>Servicios: ${{ total_serv }} (Comisión {{ porcentaje }}%: ${{ comision_dinero | round(2) }})</span>
+                            <span>Propinas: ${{ total_prop }}</span>
+                        </div>
+                    </li>
+                    {% endfor %}
+                {% else %}
+                    <li><span>No hay ventas registradas.</span></li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div class="section" style="border-left: 5px solid #10b981;">
+            <h2>📊 Historial General de Movimientos Contables</h2>
+            <table class="history-table">
+                <thead>
+                    <tr><th>Fecha y Hora</th><th>Descripción</th><th>Método</th><th>Tipo</th><th>Monto</th></tr>
+                </thead>
+                <tbody>
+                    {% if transacciones_python %}
+                        {% for transaccion in transacciones_python %}
+                        <tr>
+                            <td style="color: #64748b; font-size: 14px;">📅 {{ transaccion[0] }}</td>
+                            <td>{{ transaccion[3] }}</td>
+                            <td style="font-size: 13px;"><strong>{{ transaccion[4] }}</strong></td>
+                            <td>{% if transaccion[1] == 'ingreso' %}<span style="background-color: #d1fae5; color: #059669; padding: 3px 8px; border-radius: 10px; font-size: 12px; font-weight: bold;">INGRESO</span>{% else %}<span style="background-color: #fee2e2; color: #dc2626; padding: 3px 8px; border-radius: 10px; font-size: 12px; font-weight: bold;">EGRESO</span>{% endif %}</td>
+                            <td style="font-weight: bold; color: {% if transaccion[1] == 'ingreso' %}#059669{% else %}#dc2626{% endif %};">{% if transaccion[1] == 'ingreso' %}+{% else %}-{% endif %}${{ transaccion[2] }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="5">No hay movimientos.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Gráfico de métodos de pago
+        const ctx1 = document.getElementById('metodosPagoChart').getContext('2d');
+        new Chart(ctx1, {
+            type: 'doughnut',
+            data: {
+                labels: ['Efectivo', 'Banco'],
+                datasets: [{
+                    data: [{{ efectivo_python }}, {{ banco_python }}],
+                    backgroundColor: ['#10b981', '#0284c7']
+                }]
+            }
+        });
+
+        // Gráfico de producción por barbero con ticks enteros (sin decimales extraños)
+        const ctx2 = document.getElementById('barberosChart').getContext('2d');
+        new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for barbero in reporte_barberos %}
+                        "{{ barbero[0] }}",
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Ventas ($)',
+                    data: [
+                        {% for barbero in reporte_barberos %}
+                            {{ barbero[2] }},
+                        {% endfor %}
+                    ],
+                    backgroundColor: '#8b5cf6'
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1 // Fuerza a que la gráfica suba de 1 en 1 para evitar los decimales 0.4, 0.8
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

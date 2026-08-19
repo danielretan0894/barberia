@@ -1,0 +1,5 @@
+barberia_saas.db
+__pycache__/
+.env
+.vscode/
+node_modules/

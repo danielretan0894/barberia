@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendar Cita - {{ nombre_barberia }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: #1e293b; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px;}
+        .reserva-box { background-color: white; color: #333; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 100%; max-width: 400px; }
+        .reserva-box h1 { text-align: center; color: #0f172a; margin-bottom: 5px; font-size: 24px; }
+        .reserva-box p { text-align: center; color: #64748b; margin-bottom: 20px; font-size: 14px; }
+        .reserva-box label { display: block; font-weight: bold; margin-bottom: 5px; margin-top: 15px; color: #0f172a;}
+        .reserva-box input, .reserva-box select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 16px; background-color: #f8fafc;}
+        .reserva-box button { width: 100%; padding: 15px; background-color: #10b981; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 25px; }
+        .reserva-box button:hover { background-color: #059669; }
+    </style>
+</head>
+<body>
+    <div class="reserva-box">
+        <h1>💈 {{ nombre_barberia }}</h1>
+        <p>Completa tus datos para apartar tu lugar.</p>
+
+        <form action="/reservar/{{ id_negocio }}" method="POST">
+            <label>👤 Tu Nombre Completo:</label>
+            <input type="text" name="nombre_cliente" placeholder="Ej. Carlos Martínez" required>
+
+            <label>✂️ ¿Qué servicio buscas?</label>
+            <select name="servicio" required>
+                <option value="">Selecciona un servicio...</option>
+                {% for s in servicios %}
+                    <option value="{{ s[1] }}">{{ s[1] }} - ${{ s[2] }}</option>
+                {% endfor %}
+            </select>
+
+            <label>💈 ¿Con quién te cortas?</label>
+            <select name="nombre_barbero" required>
+                <option value="">Cualquier barbero disponible...</option>
+                {% for barbero in barberos %}
+                    <option value="{{ barbero[1] }}">{{ barbero[1] }}</option>
+                {% endfor %}
+            </select>
+
+            <label>📅 Fecha y Hora:</label>
+            <input type="datetime-local" name="fecha_hora" required>
+
+            <button type="submit">CONFIRMAR CITA</button>
+        </form>
+    </div>
+</body>
+</html>
