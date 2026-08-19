@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from base_datos import GestorBaseDatos 
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
+import os
 
 app = Flask(__name__)
 app.secret_key = 'mi_contraseña_secreta_super_segura'
@@ -8,7 +10,7 @@ db = GestorBaseDatos()
 
 @app.before_request
 def guardia():
-    rutas_publicas = ['login', 'login_demo', 'seleccionar_sucursal', 'suscripcion_vencida']
+    rutas_publicas = ['login', 'login_demo', 'seleccionar_sucursal', 'suscripcion_vencida', 'forzar_cambio_password']
     if request.endpoint not in rutas_publicas and request.endpoint != 'static':
         if 'usuario_logeado' not in session: return redirect(url_for('login'))
 
@@ -16,20 +18,62 @@ def guardia():
 def login():
     error = None
     if request.method == 'POST':
-        sucursales = db.verificar_usuario_multiples_negocios(request.form['usuario'], request.form['password'])
+        usuario_ingresado = request.form['usuario']
+        password_ingresada = request.form['password']
+        
+        sucursales = db.verificar_usuario_multiples_negocios(usuario_ingresado, password_ingresada)
+        
         if sucursales:
-            if sucursales[0][0] == 'superadmin':
-                session.update({'usuario_logeado': request.form['usuario'], 'rol': 'superadmin', 'id_negocio': 0})
-                return redirect(url_for('superadmin'))
-            elif len(sucursales) == 1:
-                session.update({'usuario_logeado': request.form['usuario'], 'rol': sucursales[0][0], 'id_negocio': sucursales[0][1], 'nombre_barberia': sucursales[0][2]})
+            # Consultamos si este usuario específico debe cambiar su contraseña por primera vez
+            conexion = db.conectar()
+            cursor = conexion.cursor()
+            cursor.execute("SELECT id, cambiar_password FROM usuarios WHERE usuario = ?", (usuario_ingresado,))
+            user_db_info = cursor.fetchone()
+            conexion.close()
+            
+            if user_db_info and user_db_info[1] == 1:
+                session['id_usuario_cambio'] = user_db_info[0]
+                return redirect(url_for('forzar_cambio_password'))
+                
+            if len(sucursales) == 1:
+                session.update({
+                    'usuario_logeado': usuario_ingresado, 
+                    'rol': sucursales[0][0], 
+                    'id_negocio': sucursales[0][1], 
+                    'nombre_barberia': sucursales[0][2]
+                })
+                if sucursales[0][0] == 'superadmin':
+                    return redirect(url_for('superadmin'))
                 return redirect(url_for('inicio'))
             else:
-                session.update({'temp_usuario': request.form['usuario'], 'temp_sucursales': sucursales})
+                session['temp_usuario'] = usuario_ingresado
+                session['temp_sucursales'] = sucursales
                 return redirect(url_for('seleccionar_sucursal'))
         else:
-            error = 'Usuario o contraseña incorrectos.'
+            error = "Usuario o contraseña incorrectos."
+            
     return render_template('login.html', error=error)
+
+@app.route('/forzar_cambio_password', methods=['GET', 'POST'])
+def forzar_cambio_password():
+    if 'id_usuario_cambio' not in session:
+        return redirect(url_for('login'))
+        
+    error = None
+    if request.method == 'POST':
+        nueva_pass = request.form['nueva_password']
+        conf_pass = request.form['confirmar_password']
+        
+        if len(nueva_pass) < 8:
+            error = "La contraseña debe tener al menos 8 caracteres."
+        elif nueva_pass != conf_pass:
+            error = "Las contraseñas no coinciden."
+        else:
+            db.actualizar_password_inicial(session['id_usuario_cambio'], nueva_pass)
+            session.pop('id_usuario_cambio', None)
+            return redirect(url_for('login'))
+            
+    return render_template('cambiar_password_inicial.html', error=error)
 
 @app.route('/seleccionar_sucursal', methods=['GET', 'POST'])
 def seleccionar_sucursal():
@@ -52,13 +96,17 @@ def login_demo():
     return redirect(url_for('login'))
 
 @app.route('/logout')
-def logout(): session.clear(); return redirect(url_for('login'))
+def logout(): 
+    session.clear()
+    return redirect(url_for('login'))
 
 @app.route('/')
-def inicio(): return render_template('peluqueria.html', balance_python=db.obtener_resumen(session['id_negocio'])[0], citas_python=db.obtener_resumen(session['id_negocio'])[3], agenda_python=db.obtener_lista_citas(session['id_negocio']), barberos_python=db.obtener_barberos(session['id_negocio']), servicios_python=db.obtener_servicios(session['id_negocio']), alertas_python=db.obtener_alertas_inventario(session['id_negocio']))
+def inicio(): 
+    return render_template('peluqueria.html', balance_python=db.obtener_resumen(session['id_negocio'])[0], citas_python=db.obtener_resumen(session['id_negocio'])[3], agenda_python=db.obtener_lista_citas(session['id_negocio']), barberos_python=db.obtener_barberos(session['id_negocio']), servicios_python=db.obtener_servicios(session['id_negocio']), alertas_python=db.obtener_alertas_inventario(session['id_negocio']))
 
 @app.route('/pos')
-def pos(): return render_template('pos.html', barberos_python=db.obtener_barberos(session['id_negocio']), servicios_python=db.obtener_servicios(session['id_negocio']))
+def pos(): 
+    return render_template('pos.html', barberos_python=db.obtener_barberos(session['id_negocio']), servicios_python=db.obtener_servicios(session['id_negocio']))
 
 @app.route('/cobrar_pos', methods=['POST'])
 def cobrar_pos():
@@ -67,19 +115,24 @@ def cobrar_pos():
     return redirect(url_for('pos'))
 
 @app.route('/agenda')
-def agenda(): return render_template('agenda.html', agenda_python=db.obtener_lista_citas(session['id_negocio']))
+def agenda(): 
+    return render_template('agenda.html', agenda_python=db.obtener_lista_citas(session['id_negocio']))
 
 @app.route('/clientes')
-def clientes(): return render_template('clientes.html', clientes_python=db.obtener_clientes(session['id_negocio']), db=db)
+def clientes(): 
+    return render_template('clientes.html', clientes_python=db.obtener_clientes(session['id_negocio']), db=db)
 
 @app.route('/finanzas')
-def finanzas(): return render_template('finanzas.html', balance_python=db.obtener_resumen(session['id_negocio'])[0], efectivo_python=db.obtener_resumen(session['id_negocio'])[1], banco_python=db.obtener_resumen(session['id_negocio'])[2], transacciones_python=db.obtener_transacciones(session['id_negocio']), reporte_barberos=db.obtener_reporte_barberos(session['id_negocio']))
+def finanzas(): 
+    return render_template('finanzas.html', balance_python=db.obtener_resumen(session['id_negocio'])[0], efectivo_python=db.obtener_resumen(session['id_negocio'])[1], banco_python=db.obtener_resumen(session['id_negocio'])[2], transacciones_python=db.obtener_transacciones(session['id_negocio']), reporte_barberos=db.obtener_reporte_barberos(session['id_negocio']))
 
 @app.route('/inventario')
-def inventario(): return render_template('inventario.html', servicios_python=db.obtener_servicios(session['id_negocio']), alertas_python=db.obtener_alertas_inventario(session['id_negocio']))
+def inventario(): 
+    return render_template('inventario.html', servicios_python=db.obtener_servicios(session['id_negocio']), alertas_python=db.obtener_alertas_inventario(session['id_negocio']))
 
 @app.route('/ajustes')
-def ajustes(): return render_template('ajustes.html', barberos_python=db.obtener_barberos(session['id_negocio']), usuarios_python=db.obtener_usuarios(session['id_negocio']))
+def ajustes(): 
+    return render_template('ajustes.html', barberos_python=db.obtener_barberos(session['id_negocio']), usuarios_python=db.obtener_usuarios(session['id_negocio']))
 
 @app.route('/nuevo_usuario', methods=['POST'])
 def nuevo_usuario():
@@ -105,7 +158,7 @@ def nuevo_servicio():
 def superadmin():
     if session.get('rol') != 'superadmin': return redirect(url_for('login'))
     act, ing = db.obtener_finanzas_superadmin()
-    return render_template('superadmin.html', negocios=db.obtener_todos_negocios(), alertas=db.obtener_negocios_urgentes(), negocios_activos=act, ingresos_globales=ing, desglose_financiero=db.obtener_desglose_financiero_negocios(), usuarios_globales=db.obtener_todos_los_usuarios())
+    return render_template('superadmin.html', negocios=db.obtener_todos_negocios(), alertas=db.obtener_negocios_urgentes(), negocios_activos=act, ingresos_globales=ing, desglose_financiero=db.obtener_desglose_financiero_negocios(), usuarios_globales=db.obtener_todos_los_usuarios(), usuario=session.get('usuario_logeado'))
 
 @app.route('/crear_negocio', methods=['POST'])
 def crear_negocio():
@@ -123,23 +176,23 @@ def eliminar_negocio(id_negocio):
         db.eliminar_negocio_completo(id_negocio)
     return redirect(url_for('superadmin'))
 
-@app.route('/cambiar_password_admin', methods=['POST'])
-def cambiar_password_admin():
-    db.cambiar_password_usuario(request.form['id_usuario'], request.form['nueva_password'])
-    return redirect(url_for('superadmin'))
-
 @app.route('/eliminar_usuario_admin/<int:id_usuario>')
 def eliminar_usuario_admin(id_usuario):
     if session.get('rol') == 'superadmin':
         db.eliminar_usuario_global(id_usuario)
     return redirect(url_for('superadmin'))
 
+@app.route('/cambiar_password_admin', methods=['POST'])
+def cambiar_password_admin():
+    if session.get('rol') != 'superadmin':
+        return redirect(url_for('login'))
+    db.cambiar_password_usuario(request.form['id_usuario'], request.form['nueva_password'])
+    return redirect(url_for('superadmin'))
+
 @app.template_filter('datetime_diff')
 def datetime_diff(date_str):
     return datetime.strptime(date_str, "%Y-%m-%d") - datetime.now()
 
-import os
-
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=False)

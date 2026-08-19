@@ -1,5 +1,6 @@
 import sqlite3
 from datetime import datetime, timedelta
+from werkzeug.security import check_password_hash, generate_password_hash
 
 class GestorBaseDatos:
     def __init__(self, nombre_bd='barberia_saas.db'):
@@ -12,34 +13,56 @@ class GestorBaseDatos:
     def crear_tablas(self):
         conexion = self.conectar()
         cursor = conexion.cursor()
+        
+        # Tabla negocios
         cursor.execute('''CREATE TABLE IF NOT EXISTS negocios (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre_barberia TEXT, estado_suscripcion TEXT DEFAULT 'activa', fecha_vencimiento TEXT)''')
+        
+        # Tabla usuarios con la columna cambiar_password incluida por defecto
+        cursor.execute('''CREATE TABLE IF NOT EXISTS usuarios (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                            id_negocio INTEGER, 
+                            usuario TEXT, 
+                            password TEXT, 
+                            rol TEXT,
+                            cambiar_password INTEGER DEFAULT 1
+                        )''')
+        
+        # Otras tablas de tu sistema
         cursor.execute('''CREATE TABLE IF NOT EXISTS finanzas (id INTEGER PRIMARY KEY AUTOINCREMENT, id_negocio INTEGER, fecha TEXT, tipo TEXT, monto REAL, descripcion TEXT, metodo_pago TEXT DEFAULT 'Efectivo')''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS citas (id INTEGER PRIMARY KEY AUTOINCREMENT, id_negocio INTEGER, cliente TEXT, estilista TEXT, inicio TEXT, fin TEXT, servicio TEXT, precio REAL, propina REAL DEFAULT 0)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS clientes (id INTEGER PRIMARY KEY AUTOINCREMENT, id_negocio INTEGER, nombre TEXT, telefono TEXT, notas TEXT)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS barberos (id INTEGER PRIMARY KEY AUTOINCREMENT, id_negocio INTEGER, nombre TEXT, comision REAL DEFAULT 50)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS servicios (id INTEGER PRIMARY KEY AUTOINCREMENT, id_negocio INTEGER, nombre TEXT, precio REAL, tipo TEXT DEFAULT 'servicio', stock INTEGER DEFAULT 0, stock_minimo INTEGER DEFAULT 5)''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS usuarios (id INTEGER PRIMARY KEY AUTOINCREMENT, id_negocio INTEGER, usuario TEXT, password TEXT, rol TEXT)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS ventas_pos (id INTEGER PRIMARY KEY AUTOINCREMENT, id_negocio INTEGER, fecha TEXT, cliente TEXT, estilista TEXT, servicio TEXT, precio REAL, propina REAL, total REAL, efectivo_recibido REAL, cambio REAL, aplica_comision INTEGER DEFAULT 1, metodo_pago TEXT DEFAULT 'Efectivo')''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS lealtad (id INTEGER PRIMARY KEY AUTOINCREMENT, id_negocio INTEGER, nombre_cliente TEXT, puntos INTEGER DEFAULT 0)''')
         
+        # Verificamos si existe el superadmin por defecto
         cursor.execute("SELECT COUNT(*) FROM usuarios WHERE rol = 'superadmin'")
         if cursor.fetchone()[0] == 0:
-            cursor.execute("INSERT INTO usuarios (id_negocio, usuario, password, rol) VALUES (0, 'master', 'master123', 'superadmin')")
+            password_master_segura = generate_password_hash('master123')
+            cursor.execute("INSERT INTO usuarios (id_negocio, usuario, password, rol, cambiar_password) VALUES (0, 'master', ?, 'superadmin', 1)", (password_master_segura,))
+            
         conexion.commit()
         conexion.close()
 
-    def verificar_usuario_multiples_negocios(self, usuario, password):
+    def verificar_usuario_multiples_negocios(self, usuario, password_ingresada):
         conexion = self.conectar()
         cursor = conexion.cursor()
         cursor.execute("""
-            SELECT u.rol, u.id_negocio, n.nombre_barberia 
+            SELECT u.id, u.id_negocio, u.usuario, u.password, u.rol, n.nombre_barberia 
             FROM usuarios u 
             LEFT JOIN negocios n ON u.id_negocio = n.id 
-            WHERE u.usuario = ? AND u.password = ?
-        """, (usuario, password))
-        res = cursor.fetchall()
+            WHERE u.usuario = ?
+        """, (usuario,))
+        
+        resultado = cursor.fetchone()
         conexion.close()
-        return res
+        
+        if resultado:
+            id_u, id_neg, usr, hash_guardado, rol, nom_barberia = resultado
+            if check_password_hash(hash_guardado, password_ingresada):
+                return [(rol, id_neg, nom_barberia)]
+        return []
 
     def verificar_suscripcion(self, id_negocio):
         conexion = self.conectar()
@@ -189,10 +212,11 @@ class GestorBaseDatos:
         conexion.close()
         return res
 
-    def agregar_usuario(self, id_negocio, usuario, password, rol):
+    def agregar_usuario(self, id_negocio, usuario, password_plana, rol):
         conexion = self.conectar()
         cursor = conexion.cursor()
-        cursor.execute("INSERT INTO usuarios (id_negocio, usuario, password, rol) VALUES (?, ?, ?, ?)", (id_negocio, usuario, password, rol))
+        password_segura = generate_password_hash(password_plana)
+        cursor.execute("INSERT INTO usuarios (id_negocio, usuario, password, rol, cambiar_password) VALUES (?, ?, ?, ?, 1)", (id_negocio, usuario, password_segura, rol))
         conexion.commit()
         conexion.close()
 
@@ -244,7 +268,8 @@ class GestorBaseDatos:
         fecha_venc = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
         cursor.execute("INSERT INTO negocios (nombre_barberia, estado_suscripcion, fecha_vencimiento) VALUES (?, 'activa', ?)", (nombre_barberia, fecha_venc))
         nuevo_id = cursor.lastrowid
-        cursor.execute("INSERT INTO usuarios (id_negocio, usuario, password, rol) VALUES (?, ?, ?, 'admin')", (nuevo_id, usuario_admin, password_admin))
+        password_segura = generate_password_hash(password_admin)
+        cursor.execute("INSERT INTO usuarios (id_negocio, usuario, password, rol, cambiar_password) VALUES (?, ?, ?, 'admin', 1)", (nuevo_id, usuario_admin, password_segura))
         conexion.commit()
         conexion.close()
 
@@ -291,7 +316,8 @@ class GestorBaseDatos:
         if not cursor.fetchone():
             cursor.execute("INSERT INTO negocios (nombre_barberia, estado_suscripcion, fecha_vencimiento) VALUES ('Demo Barber', 'activa', '2030-01-01')")
             id_demo = cursor.lastrowid
-            cursor.execute("INSERT INTO usuarios (id_negocio, usuario, password, rol) VALUES (?, 'demo', '12345', 'admin')", (id_demo,))
+            password_demo = generate_password_hash('12345')
+            cursor.execute("INSERT INTO usuarios (id_negocio, usuario, password, rol, cambiar_password) VALUES (?, 'demo', ?, 'admin', 0)", (id_demo, password_demo))
             conexion.commit()
             self.crear_datos_demo(id_demo)
         conexion.close()
@@ -330,10 +356,19 @@ class GestorBaseDatos:
         conexion.close()
         return res
 
-    def cambiar_password_usuario(self, id_usuario, nueva_password):
+    def cambiar_password_usuario(self, id_usuario, nueva_password_plana):
         conexion = self.conectar()
         cursor = conexion.cursor()
-        cursor.execute("UPDATE usuarios SET password = ? WHERE id = ?", (nueva_password, id_usuario))
+        nueva_password_segura = generate_password_hash(nueva_password_plana)
+        cursor.execute("UPDATE usuarios SET password = ? WHERE id = ?", (nueva_password_segura, id_usuario))
+        conexion.commit()
+        conexion.close()
+
+    def actualizar_password_inicial(self, id_usuario, nueva_password_plana):
+        conexion = self.conectar()
+        cursor = conexion.cursor()
+        nueva_password_segura = generate_password_hash(nueva_password_plana)
+        cursor.execute("UPDATE usuarios SET password = ?, cambiar_password = 0 WHERE id = ?", (nueva_password_segura, id_usuario))
         conexion.commit()
         conexion.close()
 

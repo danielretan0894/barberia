@@ -184,6 +184,13 @@
             </tbody>
         </table>
     </div>
+<form action="/cambiar_password_admin" method="POST">
+    <!-- Oculto el ID del usuario para saber a quién se la vamos a cambiar -->
+    <input type="hidden" name="id_usuario" value="{{ usuario.id }}">
+    
+    <input type="password" name="nueva_password" placeholder="Nueva contraseña" required>
+    <button type="submit" class="btn btn-warning btn-sm">Actualizar Contraseña</button>
+</form>    
 
 </body>
 </html>
