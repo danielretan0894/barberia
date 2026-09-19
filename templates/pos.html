@@ -1,169 +1,272 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Barber Pro - Punto de Venta</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        body { display: flex; height: 100vh; background-color: #f4f7f6; color: #333; overflow: hidden; }
-        .sidebar { width: 250px; background-color: #1e293b; color: white; padding: 20px; display: flex; flex-direction: column; flex-shrink: 0; }
-        .sidebar h2 { margin-bottom: 30px; font-size: 20px; text-align: center; }
-        .menu { list-style: none; }
-        .menu li { padding: 15px; margin-bottom: 10px; border-radius: 8px; cursor: pointer; transition: background 0.3s; }
-        .menu li:hover, .menu li.active { background-color: #334155; font-weight: bold; }
-        
-        .main-content { flex: 1; padding: 30px; display: flex; gap: 20px; overflow-y: auto;}
-        
-        .caja-form { flex: 2; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .caja-form h1 { border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 20px; color: #0f172a; }
-        .caja-form label { display: block; margin-top: 15px; font-weight: bold; color: #475569; }
-        .caja-form input, .caja-form select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 16px; }
-        
-        .ticket-panel { flex: 1; background-color: #1e293b; color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: space-between; }
-        .ticket-panel h2 { text-align: center; color: #38bdf8; margin-bottom: 20px; }
-        .total-box { background-color: #0f172a; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
-        .total-box p { color: #94a3b8; font-size: 18px; margin-bottom: 5px; }
-        .total-box h3 { font-size: 40px; color: #10b981; }
-        .cambio-box { text-align: center; font-size: 24px; margin-top: 10px; }
-        .btn-cobrar { background-color: #10b981; color: white; width: 100%; padding: 20px; font-size: 20px; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; transition: 0.3s; margin-top: 20px;}
-        .btn-cobrar:hover { background-color: #059669; }
-    </style>
-</head>
-<body>
-    <div class="sidebar">
-        <h2>💈 {{ session.get('nombre_barberia', 'BARBER PRO') }}</h2>
-        <ul class="menu">
-            <a href="/" style="text-decoration: none; color: inherit;"><li>📌 Inicio</li></a>
-            <a href="/pos" style="text-decoration: none; color: inherit;"><li class="active">🛒 Punto de Venta</li></a>
-            <a href="/agenda" style="text-decoration: none; color: inherit;"><li>📅 Agenda</li></a>
-            <a href="/clientes" style="text-decoration: none; color: inherit;"><li>👥 Clientes</li></a>
-            {% if session.get('rol') == 'admin' %}
-                <a href="/inventario" style="text-decoration: none; color: inherit;"><li>📦 Inventario</li></a>
-                <a href="/finanzas" style="text-decoration: none; color: inherit;"><li>💰 Finanzas</li></a>
-                <a href="/ajustes" style="text-decoration: none; color: inherit;"><li>⚙️ Ajustes</li></a>
-            {% endif %}
-            <br><a href="/logout" style="text-decoration: none; color: #fca5a5;"><li>🚪 Cerrar Sesión</li></a>
-        </ul>
-    </div>
-    
-    <div class="main-content">
-        <div class="caja-form">
-            <h1>🛒 Caja Registradora y Lealtad</h1>
-            <form id="pos-form" action="/cobrar_pos" method="POST">
-                
-                <label>👤 Nombre del Cliente:</label>
-                <input type="text" name="nombre_cliente" id="input_cliente" onblur="checarPuntos()" placeholder="Ej. Juan Pérez (Dejar en blanco para Mostrador)">
+{% extends "layout.html" %}
 
-                <!-- ALERTA DEL PROGRAMA DE LEALTAD -->
-                <div id="box-lealtad" style="display:none; background:#fef3c7; padding:12px; border-radius:8px; margin-top:10px; border:1px solid #f97316;">
-                    <p style="color: #92400e; font-size: 14px;">⭐ Este cliente tiene acumulados <span id="span-puntos" style="font-weight:bold;">0</span> puntos en su tarjeta de lealtad.</p>
+{% block content %}
+<div class="row g-4 mb-5">
+    <!-- Columna Izquierda: Formulario POS Principal -->
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0 rounded-4 p-4 bg-white">
+            <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+                <div>
+                    <h4 class="fw-bold text-dark mb-1"><i class="fas fa-cash-register text-primary me-2"></i> Punto de Venta</h4>
+                    <p class="text-muted small mb-0">Genera cobros y administra el ticket actual</p>
+                </div>
+                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2 fw-semibold rounded-pill">
+                    <i class="fas fa-lock-open me-1"></i> Caja Abierta ($<b>{{ session.get('caja_inicial', 0.0) }}</b>)
+                </span>
+            </div>
+
+            <form action="/cobrar_pos" method="POST" id="form-pos">
+                <!-- Fila de Selección: Cliente y Barbero -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-secondary">Cliente del Día:</label>
+                        <select name="nombre_cliente" class="form-select shadow-sm py-2" required>
+                            <option value="Mostrador" selected>Mostrador (Cliente General)</option>
+                            {% for cli in clientes_python %}
+                                <option value="{{ cli[0] }}">{{ cli[0] }} {% if cli[1] %}({{ cli[1] }}){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-secondary">Barbero / Estilista:</label>
+                        <select name="nombre_barbero" class="form-select shadow-sm py-2" required>
+                            <option value="" disabled selected>Selecciona barbero...</option>
+                            {% for barbero in barberos_python %}
+                                <option value="{{ barbero[1] }}">{{ barbero[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
 
-                <label>💈 Atendido por / Vendedor:</label>
-                <select name="nombre_barbero" required>
-                    <option value="">Selecciona al barbero o vendedor...</option>
-                    {% for barbero in barberos_python %}
-                        <option value="{{ barbero[1] }}">{{ barbero[1] }}</option>
-                    {% endfor %}
-                </select>
+                <!-- Selector de Productos o Servicios -->
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-secondary">Agregar Servicio o Producto:</label>
+                    <div class="input-group shadow-sm">
+                        <select id="select-item" class="form-select py-2">
+                            <option value="" disabled selected>Selecciona una opción del inventario...</option>
+                            {% for servicio in servicios_python %}
+                                <option value="{{ servicio[1] }}" data-precio="{{ servicio[2] }}" data-stock="{{ servicio[4] }}" data-tipo="{{ servicio[3] }}">
+                                    {{ servicio[1] }} — ${{ "%.2f"|format(servicio[2]) }} {% if servicio[3] == 'producto' %}(Stock: {{ servicio[4] }}){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" class="btn btn-dark fw-semibold px-4" onclick="agregarAlCarrito()">
+                            <i class="fas fa-plus me-1"></i> Agregar
+                        </button>
+                    </div>
+                </div>
 
-                <label>📦 Servicio o Producto:</label>
-                <select name="servicio_precio" id="servicio" required onchange="calcularTotal()">
-                    <option value="0|0|servicio">Selecciona una opción de la lista...</option>
-                    {% for s in servicios_python %}
-                        <option value="{{ s[1] }}|{{ s[2] }}|{{ s[3] }}">
-                            {{ s[1] }} - ${{ s[2] }} 
-                            {% if s[3] == 'producto' %}(Stock: {{ s[4] }}){% endif %}
-                        </option>
-                    {% endfor %}
-                </select>
+                <!-- Tabla del Carrito -->
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-secondary mb-2">Conceptos en el Carrito:</label>
+                    <div class="table-responsive border rounded-3 bg-light p-1" style="max-height: 180px; overflow-y: auto;">
+                        <table class="table table-borderless align-middle mb-0">
+                            <thead class="text-muted small text-uppercase">
+                                <tr>
+                                    <th class="ps-3">Concepto</th>
+                                    <th style="width: 120px;" class="text-end">Precio</th>
+                                    <th style="width: 60px;" class="text-center">Quitar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cart-body" class="bg-white">
+                                <!-- Elementos dinámicos del carrito -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
-                <label>💵 Propina (Opcional):</label>
-                <input type="number" step="0.01" name="propina" id="propina" value="0" oninput="calcularTotal()">
+                <!-- Sección de Pagos y Propina -->
+                <div class="row g-3 mb-4 p-3 bg-light rounded-4 border">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-secondary">Propina ($):</label>
+                        <input type="number" step="0.01" min="0" name="propina" value="0.00" id="input-propina" class="form-control shadow-sm" onfocus="this.select()" oninput="calcularTotalYCambio()">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-secondary">Método de Pago:</label>
+                        <select name="metodo_pago" id="metodo_pago" class="form-select shadow-sm" onchange="toggleMetodoPago()" required>
+                            <option value="Efectivo" selected>Efectivo</option>
+                            <option value="Tarjeta">Tarjeta</option>
+                            <option value="Transferencia">Transferencia</option>
+                            <option value="Pago Mixto">Pago Mixto (Efectivo + Tarjeta)</option>
+                        </select>
+                    </div>
 
-                <label>💳 Método de Pago:</label>
-                <select name="metodo_pago" id="metodo_pago" required onchange="calcularTotal()" style="border-color: #10b981; border-width: 2px;">
-                    <option value="Efectivo">💵 Efectivo (Suma a Cajón)</option>
-                    <option value="Tarjeta">💳 Tarjeta / Terminal (Suma a Banco)</option>
-                    <option value="Transferencia">📱 Transferencia (Suma a Banco)</option>
-                </select>
+                    <!-- Sub-bloque: Efectivo Recibido y Cambio -->
+                    <div id="seccion-efectivo" class="col-12 mt-3">
+                        <div class="row g-2 p-3 bg-white rounded-3 border">
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted">Efectivo Recibido ($):</label>
+                                <input type="number" step="0.01" min="0" id="efectivo-recibido" value="0.00" class="form-control shadow-sm" onfocus="this.select()" oninput="calcularTotalYCambio()">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-danger">Cambio a Devolver:</label>
+                                <div class="form-control bg-light fw-bold text-danger fs-5" id="cambio-devolver">$0.00</div>
+                            </div>
+                        </div>
+                    </div>
 
-                <hr style="margin: 25px 0; border: 1px solid #f1f5f9;">
+                    <!-- Sub-bloque: Pago Mixto -->
+                    <div id="seccion-mixto" class="col-12 mt-3 d-none">
+                        <div class="row g-2 p-3 bg-white rounded-3 border">
+                            <div class="col-12 mb-1"><small class="fw-bold text-primary">Desglose de Pago Mixto:</small></div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted">Efectivo ($):</label>
+                                <input type="number" step="0.01" min="0" name="mixto_efectivo" value="0.00" class="form-control form-control-sm" onfocus="this.select()">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted">Tarjeta/Transf. ($):</label>
+                                <input type="number" step="0.01" min="0" name="mixto_banco" value="0.00" class="form-control form-control-sm" onfocus="this.select()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                <label style="color: #2563eb; font-size: 18px;">💵 Dinero Recibido:</label>
-                <input type="number" step="0.01" id="pago_recibido" name="pago_recibido" placeholder="Ej. 200" required oninput="calcularTotal()" style="border-color: #2563eb; border-width: 2px;">
+                <!-- Total General y Botón de Cobro -->
+                <div class="d-flex justify-content-between align-items-center bg-dark text-white p-3 rounded-4 mb-4 shadow-sm">
+                    <span class="fs-6 text-uppercase fw-semibold opacity-75">Total a Pagar:</span>
+                    <h2 class="fw-bold text-success mb-0" id="cart-total">$0.00</h2>
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-success fw-bold py-3 shadow fs-5 rounded-3" id="btn-cobrar" disabled>
+                        <i class="fas fa-check-circle me-2"></i> Cobrar y Generar Ticket
+                    </button>
+                </div>
             </form>
         </div>
-
-        <div class="ticket-panel">
-            <div>
-                <h2>TOTAL A COBRAR</h2>
-                <div class="total-box">
-                    <p>Monto Total:</p>
-                    <h3 id="total-display">$0.00</h3>
-                </div>
-                <div class="cambio-box">
-                    <p style="font-size: 16px; color: #94a3b8;">Cambio a entregar:</p>
-                    <h2 id="cambio-display" style="color: white; font-size: 40px;">$0.00</h2>
-                </div>
-            </div>
-            <button type="submit" form="pos-form" class="btn-cobrar">💵 COBRAR E IMPRIMIR</button>
-        </div>
     </div>
 
-    <script>
-        function calcularTotal() {
-            let selectServicio = document.getElementById('servicio').value;
-            let propina = parseFloat(document.getElementById('propina').value) || 0;
-            let metodo = document.getElementById('metodo_pago').value;
-            let pagoInput = document.getElementById('pago_recibido');
+    <!-- Columna Derecha: Citas del Día Organizadas -->
+    <div class="col-lg-5">
+        <div class="card shadow-sm border-0 rounded-4 p-4 bg-white h-100">
+            <div class="d-flex align-items-center mb-3 pb-2 border-bottom">
+                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-calendar-day text-success me-2"></i> Citas de Hoy en Cola</h5>
+            </div>
             
-            let precioServicio = parseFloat(selectServicio.split('|')[1]) || 0;
-            let granTotal = precioServicio + propina;
-            
-            if(metodo !== 'Efectivo') {
-                pagoInput.value = granTotal.toFixed(2);
-                pagoInput.readOnly = true;
-                pagoInput.style.backgroundColor = '#e2e8f0';
-            } else {
-                pagoInput.readOnly = false;
-                pagoInput.style.backgroundColor = '#ffffff';
-            }
+            <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+                {% if agenda_python %}
+                    <div class="list-group gap-2">
+                        {% for cita in agenda_python %}
+                            <div class="list-group-item border rounded-3 p-3 bg-light shadow-sm">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-primary px-2 py-1"><i class="fas fa-clock me-1"></i> {{ cita[2] }}</span>
+                                    <span class="badge bg-secondary px-2 py-1"><i class="fas fa-user-tie me-1"></i> {{ cita[5] }}</span>
+                                </div>
+                                <h6 class="fw-bold text-dark mb-1"><i class="fas fa-user text-primary me-1"></i> {{ cita[3] }}</h6>
+                                <p class="mb-0 small text-muted"><i class="fas fa-phone text-success me-1"></i> {{ cita[4] if cita[4] else 'Sin teléfono' }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-5 my-auto">
+                        <i class="fas fa-calendar-check fa-3x mb-3 text-secondary opacity-50"></i>
+                        <p class="mb-0">No hay citas pendientes para el día de hoy.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
 
-            let pagoRecibido = parseFloat(pagoInput.value) || 0;
-            let cambio = pagoRecibido - granTotal;
-            
-            document.getElementById('total-display').innerText = '$' + granTotal.toFixed(2);
-            if(pagoRecibido >= granTotal && granTotal > 0) {
-                document.getElementById('cambio-display').innerText = '$' + cambio.toFixed(2);
-                document.getElementById('cambio-display').style.color = '#38bdf8';
-            } else {
-                document.getElementById('cambio-display').innerText = '$0.00';
-                document.getElementById('cambio-display').style.color = 'white';
-            }
+<script>
+    let carrito = [];
+    let totalGeneral = 0;
+
+    function agregarAlCarrito() {
+        const select = document.getElementById('select-item');
+        const option = select.options[select.selectedIndex];
+        
+        if (!select.value) return;
+
+        const nombre = option.value;
+        const precio = parseFloat(option.getAttribute('data-precio'));
+        const stock = parseInt(option.getAttribute('data-stock'));
+        const tipo = option.getAttribute('data-tipo');
+
+        if (tipo === 'producto' && stock <= 0) {
+            alert('¡Atención! Este producto no cuenta con stock disponible.');
+            return;
         }
 
-        function checarPuntos() {
-            let nombre = document.getElementById('input_cliente').value.trim();
-            let boxLealtad = document.getElementById('box-lealtad');
-            if(nombre === "" || nombre === "Cliente Mostrador") {
-                boxLealtad.style.display = 'none';
-                return;
-            }
-            
-            fetch('/get_puntos/' + encodeURIComponent(nombre))
-            .then(response => response.json())
-            .then(data => {
-                if(data.puntos > 0) {
-                    boxLealtad.style.display = 'block';
-                    document.getElementById('span-puntos').innerText = data.puntos;
-                } else {
-                    boxLealtad.style.display = 'none';
-                }
-            }).catch(err => {
-                boxLealtad.style.display = 'none';
+        carrito.push({ nombre, precio });
+        renderizarCarrito();
+        select.selectedIndex = 0;
+    }
+
+    function eliminarDelCarrito(index) {
+        carrito.splice(index, 1);
+        renderizarCarrito();
+    }
+
+    function renderizarCarrito() {
+        const tbody = document.getElementById('cart-body');
+        tbody.innerHTML = '';
+        
+        if (carrito.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3 small">El carrito está vacío</td></tr>`;
+        } else {
+            carrito.forEach((item, index) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="ps-3 fw-medium">
+                            ${item.nombre}
+                            <input type="hidden" name="cart_servicio[]" value="${item.nombre}">
+                            <input type="hidden" name="cart_precio[]" value="${item.precio}">
+                        </td>
+                        <td class="text-end fw-bold">$${item.precio.toFixed(2)}</td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-outline-danger btn-sm border-0" onclick="eliminarDelCarrito(${index})">
+                                <i class="fas fa-trash text-danger"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
             });
         }
-    </script>
-</body>
-</html>
+
+        calcularTotalYCambio();
+    }
+
+    function calcularTotalYCambio() {
+        let subtotal = carrito.reduce((acc, item) => acc + item.precio, 0);
+        let propina = parseFloat(document.getElementById('input-propina').value) || 0;
+        
+        totalGeneral = subtotal + propina;
+        document.getElementById('cart-total').innerText = `$${totalGeneral.toFixed(2)}`;
+        document.getElementById('btn-cobrar').disabled = carrito.length === 0;
+
+        const efectivoRecibido = parseFloat(document.getElementById('efectivo-recibido').value) || 0;
+        const cambioElem = document.getElementById('cambio-devolver');
+        const cambio = efectivoRecibido - subtotal;
+
+        if (cambio >= 0) {
+            cambioElem.innerText = `$${cambio.toFixed(2)}`;
+            cambioElem.classList.remove('text-danger');
+            cambioElem.classList.add('text-success');
+        } else {
+            cambioElem.innerText = `Faltan $${Math.abs(cambio).toFixed(2)}`;
+            cambioElem.classList.remove('text-success');
+            cambioElem.classList.add('text-danger');
+        }
+    }
+
+    function toggleMetodoPago() {
+        const metodo = document.getElementById('metodo_pago').value;
+        const seccionMixto = document.getElementById('seccion-mixto');
+        const seccionEfectivo = document.getElementById('seccion-efectivo');
+
+        if (metodo === 'Pago Mixto') {
+            seccionMixto.classList.remove('d-none');
+            seccionEfectivo.classList.add('d-none');
+        } else if (metodo === 'Efectivo') {
+            seccionMixto.classList.add('d-none');
+            seccionEfectivo.classList.remove('d-none');
+        } else {
+            seccionMixto.classList.add('d-none');
+            seccionEfectivo.classList.add('d-none');
+        }
+    }
+
+    renderizarCarrito();
+</script>
+{% endblock %}

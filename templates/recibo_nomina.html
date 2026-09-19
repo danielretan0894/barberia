@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Comprobante de Pago de Nómina</title>
+    <style>
+        body { font-family: 'Courier New', Courier, monospace; width: 320px; margin: 0 auto; padding: 10px; color: #000; }
+        .center { text-align: center; }
+        .line { border-bottom: 1px dashed #000; margin: 15px 0; }
+        .flex { display: flex; justify-content: space-between; }
+        .firma-box { margin-top: 35px; text-align: center; }
+        .firma-line { border-top: 1px solid #000; margin-top: 40px; width: 80%; margin-left: auto; margin-right: auto; }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body onload="generarFecha()">
+    <div class="center">
+        <h3>{{ negocio }}</h3>
+        <p style="font-size: 0.85rem; margin: 2px 0; font-weight: bold;">RECIBO DE PAGO DE NÓMINA</p>
+        <!-- FECHA Y HORA DINÁMICA -->
+        <p style="font-size: 0.75rem; margin: 2px 0;" id="fechaHoraNomina">Cargando fecha...</p>
+    </div>
+    
+    <div class="line"></div>
+
+    {% for r in reporte %}
+        {% if r[4] > 0 %}
+            <div style="margin-bottom: 20px; font-size: 0.85rem;">
+                <div class="flex">
+                    <span><strong>Barbero:</strong></span>
+                    <span><strong>{{ r[0] }}</strong></span>
+                </div>
+                <div class="flex">
+                    <span>Servicios realizados:</span>
+                    <span>{{ r[1] }}</span>
+                </div>
+                <div class="flex">
+                    <span>Comisiones:</span>
+                    <span>${{ "%.2f"|format(r[2]) }}</span>
+                </div>
+                <div class="flex">
+                    <span>Propinas:</span>
+                    <span>${{ "%.2f"|format(r[3]) }}</span>
+                </div>
+                <div class="flex" style="font-size: 1rem; margin-top: 5px; border-top: 1px solid #000; padding-top: 2px;">
+                    <span><strong>TOTAL A RECIBIR:</strong></span>
+                    <span><strong>${{ "%.2f"|format(r[4]) }}</strong></span>
+                </div>
+                
+                <div class="firma-box">
+                    <div class="firma-line"></div>
+                    <span style="font-size: 0.75rem;">Firma de Recibido ({{ r[0] }})</span>
+                </div>
+            </div>
+            <div class="line"></div>
+        {% endif %}
+    {% endfor %}
+
+    <div class="center" style="font-size: 0.8rem;">
+        <p>¡Corte y pago de nómina procesado con éxito!</p>
+    </div>
+
+    <div class="center no-print" style="margin-top: 20px;">
+        <button onclick="window.print()" style="padding: 5px 10px; cursor: pointer;">Imprimir de nuevo</button>
+        <br><br>
+        <a href="/finanzas" style="color: blue;">Regresar a Finanzas</a>
+    </div>
+
+    <script>
+        function generarFecha() {
+            const ahora = new Date();
+            const opciones = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            document.getElementById('fechaHoraNomina').innerText = ahora.toLocaleDateString('es-MX', opciones);
+        }
+    </script>
+</body>
+</html>
