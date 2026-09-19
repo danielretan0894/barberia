@@ -233,20 +233,38 @@
         
         totalGeneral = subtotal + propina;
         document.getElementById('cart-total').innerText = `$${totalGeneral.toFixed(2)}`;
-        document.getElementById('btn-cobrar').disabled = carrito.length === 0;
 
+        const metodo = document.getElementById('metodo_pago').value;
         const efectivoRecibido = parseFloat(document.getElementById('efectivo-recibido').value) || 0;
         const cambioElem = document.getElementById('cambio-devolver');
-        const cambio = efectivoRecibido - subtotal;
+        const btnCobrar = document.getElementById('btn-cobrar');
 
-        if (cambio >= 0) {
-            cambioElem.innerText = `$${cambio.toFixed(2)}`;
-            cambioElem.classList.remove('text-danger');
-            cambioElem.classList.add('text-success');
+        if (carrito.length === 0) {
+            btnCobrar.disabled = true;
+            cambioElem.innerText = `$0.00`;
+            cambioElem.classList.remove('text-success', 'text-danger');
+            return;
+        }
+
+        if (metodo === 'Efectivo') {
+            const cambio = efectivoRecibido - totalGeneral;
+
+            if (efectivoRecibido >= totalGeneral) {
+                cambioElem.innerText = `$${cambio.toFixed(2)}`;
+                cambioElem.classList.remove('text-danger');
+                cambioElem.classList.add('text-success');
+                btnCobrar.disabled = false;
+            } else {
+                const faltante = Math.abs(cambio);
+                cambioElem.innerText = `Faltan $${faltante.toFixed(2)}`;
+                cambioElem.classList.remove('text-success');
+                cambioElem.classList.add('text-danger');
+                btnCobrar.disabled = true;
+            }
         } else {
-            cambioElem.innerText = `Faltan $${Math.abs(cambio).toFixed(2)}`;
-            cambioElem.classList.remove('text-success');
-            cambioElem.classList.add('text-danger');
+            cambioElem.innerText = `$0.00`;
+            cambioElem.classList.remove('text-success', 'text-danger');
+            btnCobrar.disabled = false;
         }
     }
 
@@ -258,12 +276,15 @@
         if (metodo === 'Pago Mixto') {
             seccionMixto.classList.remove('d-none');
             seccionEfectivo.classList.add('d-none');
+            document.getElementById('btn-cobrar').disabled = carrito.length === 0;
         } else if (metodo === 'Efectivo') {
             seccionMixto.classList.add('d-none');
             seccionEfectivo.classList.remove('d-none');
+            calcularTotalYCambio();
         } else {
             seccionMixto.classList.add('d-none');
             seccionEfectivo.classList.add('d-none');
+            document.getElementById('btn-cobrar').disabled = carrito.length === 0;
         }
     }
 

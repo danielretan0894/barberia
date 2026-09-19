@@ -138,7 +138,6 @@ def logout():
 
 @app.route('/')
 def inicio(): 
-    # Validación estricta: Si el rol es superadmin, redirigir a su panel maestro
     if session.get('rol') == 'superadmin':
         return redirect(url_for('superadmin'))
         
@@ -284,6 +283,13 @@ def nueva_cita():
     )
     return redirect(url_for('agenda'))
 
+@app.route('/cambiar_estado_cita/<int:id_cita>/<string:estado>')
+def cambiar_estado_cita(id_cita, estado):
+    if session.get('rol') == 'superadmin':
+        return redirect(url_for('superadmin'))
+    db.cambiar_estado_cita(id_cita, session['id_negocio'], estado)
+    return redirect(url_for('agenda'))
+
 @app.route('/eliminar_cita/<int:id_cita>')
 def eliminar_cita(id_cita):
     db.eliminar_cita(id_cita, session['id_negocio'])
@@ -315,12 +321,16 @@ def canjear_recompensa():
 def finanzas(): 
     if session.get('rol') == 'superadmin':
         return redirect(url_for('superadmin'))
+        
+    datos_grafica = db.obtener_datos_grafica_finanzas(session['id_negocio'])
+    
     return render_template('finanzas.html', 
                            balance_python=db.obtener_resumen(session['id_negocio'])[0], 
                            efectivo_python=db.obtener_resumen(session['id_negocio'])[1], 
                            banco_python=db.obtener_resumen(session['id_negocio'])[2], 
                            transacciones_python=db.obtener_transacciones(session['id_negocio']), 
-                           reporte_barberos=db.obtener_reporte_barberos(session['id_negocio']))
+                           reporte_barberos=db.obtener_reporte_barberos(session['id_negocio']),
+                           datos_grafica=datos_grafica)
 
 @app.route('/nueva_transaccion', methods=['POST'])
 def nueva_transaccion():
