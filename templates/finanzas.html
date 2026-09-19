@@ -1,178 +1,193 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="row g-4 mb-4">
+<div class="container-fluid px-0 py-2">
+    
+    <!-- Encabezado de la Sección -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <div>
+            <h3 class="fw-bold text-dark mb-1"><i class="fas fa-wallet text-primary me-2"></i> Módulo de Finanzas</h3>
+            <p class="text-muted small mb-0">Control de ingresos, gastos, flujo de caja y nómina de barberos</p>
+        </div>
+    </div>
+
     <!-- Tarjetas de Resumen Financiero -->
-    <div class="col-md-4">
-        <div class="card p-4 border-0 rounded-4 bg-white shadow-sm">
-            <span class="text-muted small text-uppercase fw-bold">Balance Neto / Ganancia</span>
-            <h3 class="fw-bold text-dark mb-0">${{ "%.2f"|format(balance_python) }}</h3>
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card p-4 border-0 rounded-4 bg-white shadow-sm h-100 position-relative overflow-hidden">
+                <span class="text-muted small text-uppercase fw-bold">Balance Neto / Ganancia</span>
+                <h3 class="fw-bold text-dark mt-2 mb-0">${{ "%.2f"|format(balance_python) }}</h3>
+                <span class="small text-muted mt-2 d-inline-block fw-semibold">Ingresos menos gastos globales</span>
+            </div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card p-4 border-0 rounded-4 bg-white shadow-sm">
-            <span class="text-muted small text-uppercase fw-bold">Efectivo en Caja</span>
-            <h3 class="fw-bold text-success mb-0">${{ "%.2f"|format(efectivo_python) }}</h3>
+        <div class="col-md-4">
+            <div class="card p-4 border-0 rounded-4 bg-white shadow-sm h-100 position-relative overflow-hidden">
+                <span class="text-muted small text-uppercase fw-bold">Efectivo en Caja</span>
+                <h3 class="fw-bold text-success mt-2 mb-0">${{ "%.2f"|format(efectivo_python) }}</h3>
+                <span class="small text-success mt-2 d-inline-block fw-semibold"><i class="fas fa-coins me-1"></i> Disponible físico</span>
+            </div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card p-4 border-0 rounded-4 bg-white shadow-sm">
-            <span class="text-muted small text-uppercase fw-bold">Banco / Tarjetas / Transf.</span>
-            <h3 class="fw-bold text-primary mb-0">${{ "%.2f"|format(banco_python) }}</h3>
-        </div>
-    </div>
-</div>
-
-<!-- Sección de Gráfica Financiera y Registro de Movimientos -->
-<div class="row g-4 mb-4">
-    <!-- Formulario Registrar Movimiento -->
-    <div class="col-lg-6">
-        <div class="card border-0 rounded-4 p-4 bg-white shadow-sm h-100">
-            <h5 class="fw-bold text-dark mb-3"><i class="fas fa-exchange-alt text-primary me-2"></i> Registrar Movimiento</h5>
-            <form action="/nueva_transaccion" method="POST">
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-secondary">Tipo de Movimiento:</label>
-                    <select name="tipo_transaccion" class="form-select shadow-sm" required>
-                        <option value="ingreso" selected>Ingreso (Extra / Caja)</option>
-                        <option value="gasto">Gasto (Salida de Dinero)</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-secondary">Categoría:</label>
-                    <input type="text" name="categoria" class="form-control shadow-sm" placeholder="Ej. Renta, Luz, Insumos" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-secondary">Monto ($):</label>
-                    <input type="number" step="0.01" min="0" name="monto_transaccion" class="form-control shadow-sm" placeholder="0.00" required onfocus="this.select()">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-secondary">Descripción / Concepto:</label>
-                    <input type="text" name="descripcion_transaccion" class="form-control shadow-sm" placeholder="Ej. Compra de navajas y gel" required>
-                </div>
-                <div class="mb-4">
-                    <label class="form-label small fw-bold text-secondary">Método de Pago:</label>
-                    <select name="metodo_pago" class="form-select shadow-sm" required>
-                        <option value="Efectivo" selected>Efectivo</option>
-                        <option value="Tarjeta">Tarjeta</option>
-                        <option value="Transferencia">Transferencia</option>
-                    </select>
-                </div>
-                <div class="d-grid">
-                    <button type="submit" class="btn btn-primary fw-bold py-2.5 shadow-sm">
-                        <i class="fas fa-save me-1"></i> Guardar Movimiento
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Gráfica de Distribución de Ingresos -->
-    <div class="col-lg-6">
-        <div class="card border-0 rounded-4 p-4 bg-white shadow-sm h-100 d-flex flex-column justify-content-center align-items-center">
-            <h5 class="fw-bold text-dark mb-3 w-100"><i class="fas fa-chart-pie text-success me-2"></i> Distribución de Ingresos</h5>
-            <div style="width: 100%; max-width: 320px; height: 240px; display: flex; justify-content: center; align-items: center;">
-                <canvas id="graficaIngresos"></canvas>
+        <div class="col-md-4">
+            <div class="card p-4 border-0 rounded-4 bg-white shadow-sm h-100 position-relative overflow-hidden">
+                <span class="text-muted small text-uppercase fw-bold">Banco / Tarjetas / Transf.</span>
+                <h3 class="fw-bold text-primary mt-2 mb-0">${{ "%.2f"|format(banco_python) }}</h3>
+                <span class="small text-primary mt-2 d-inline-block fw-semibold"><i class="fas fa-university me-1"></i> Disponible digital</span>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Sección de Nómina de Barberos -->
-<div class="row g-4 mb-4">
-    <div class="col-lg-12">
-        <div class="card border-0 rounded-4 p-4 bg-white shadow-sm">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-user-tie text-warning me-2"></i> Nómina y Comisiones de Barberos</h5>
-                <a href="/pagar_nomina" class="btn btn-success btn-sm fw-bold px-3 py-2 shadow-sm" onclick="return confirm('¿Desea registrar el pago de nómina del día?');">
-                    <i class="fas fa-check-circle me-1"></i> Pagar Nómina del Día
-                </a>
+    <!-- Sección de Gráfica Financiera y Registro de Movimientos -->
+    <div class="row g-4 mb-4">
+        <!-- Formulario Registrar Movimiento -->
+        <div class="col-lg-6">
+            <div class="card border-0 rounded-4 p-4 bg-white shadow-sm h-100">
+                <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom"><i class="fas fa-exchange-alt text-primary me-2"></i> Registrar Movimiento</h5>
+                <form action="/nueva_transaccion" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Tipo de Movimiento:</label>
+                        <select name="tipo_transaccion" class="form-select shadow-sm" required>
+                            <option value="ingreso" selected>Ingreso (Extra / Caja)</option>
+                            <option value="gasto">Gasto (Salida de Dinero)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Categoría:</label>
+                        <input type="text" name="categoria" class="form-control shadow-sm" placeholder="Ej. Renta, Luz, Insumos" required onfocus="this.select()">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Monto ($):</label>
+                        <input type="number" step="0.01" min="0" name="monto_transaccion" class="form-control shadow-sm" placeholder="0.00" required onfocus="this.select()">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Descripción / Concepto:</label>
+                        <input type="text" name="descripcion_transaccion" class="form-control shadow-sm" placeholder="Ej. Compra de navajas y gel" required onfocus="this.select()">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-secondary">Método de Pago:</label>
+                        <select name="metodo_pago" class="form-select shadow-sm" required>
+                            <option value="Efectivo" selected>Efectivo</option>
+                            <option value="Tarjeta">Tarjeta</option>
+                            <option value="Transferencia">Transferencia</option>
+                        </select>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary fw-bold py-2.5 shadow-sm rounded-3">
+                            <i class="fas fa-save me-1"></i> Guardar Movimiento
+                        </button>
+                    </div>
+                </form>
             </div>
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th>Barbero</th>
-                            <th class="text-center">Servicios</th>
-                            <th class="text-end">Comisión</th>
-                            <th class="text-end">Propinas</th>
-                            <th class="text-end fw-bold">Total a Pagar</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for r in reporte_barberos %}
-                        <tr>
-                            <td class="fw-bold text-dark">{{ r[0] }}</td>
-                            <td class="text-center"><span class="badge bg-secondary px-2 py-1">{{ r[1] }}</span></td>
-                            <td class="text-end">${{ "%.2f"|format(r[2]) }}</td>
-                            <td class="text-end text-success">${{ "%.2f"|format(r[3]) }}</td>
-                            <td class="text-end fw-bold text-primary fs-6">${{ "%.2f"|format(r[4]) }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="5" class="text-center text-muted py-3">No hay registros de barberos activos.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        </div>
+
+        <!-- Gráfica de Distribución de Ingresos -->
+        <div class="col-lg-6">
+            <div class="card border-0 rounded-4 p-4 bg-white shadow-sm h-100 d-flex flex-column justify-content-center align-items-center">
+                <h5 class="fw-bold text-dark mb-3 w-100 pb-2 border-bottom"><i class="fas fa-chart-pie text-success me-2"></i> Distribución de Ingresos</h5>
+                <div style="width: 100%; max-width: 320px; height: 260px; display: flex; justify-content: center; align-items: center;">
+                    <canvas id="graficaIngresos"></canvas>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Historial General de Transacciones -->
-<div class="row g-4 mb-4">
-    <div class="col-lg-12">
-        <div class="card border-0 rounded-4 p-4 bg-white shadow-sm">
-            <h5 class="fw-bold text-dark mb-3"><i class="fas fa-history text-secondary me-2"></i> Historial General de Transacciones</h5>
-            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                <table class="table align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Tipo / Categoría</th>
-                            <th>Descripción</th>
-                            <th>Método</th>
-                            <th class="text-end">Monto</th>
-                            {% if session.get('rol') == 'admin' %}
-                            <th class="text-center">Acción</th>
-                            {% endif %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for t in transacciones_python %}
-                        <tr>
-                            <td><small class="text-muted">{{ t[1] }}</small></td>
-                            <td>
-                                {% if t[2] == 'ingreso' %}
-                                    <span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 px-2 py-1">Ingreso</span>
-                                {% else %}
-                                    <span class="badge bg-danger bg-opacity-15 text-danger border border-danger border-opacity-25 px-2 py-1">Gasto</span>
+    <!-- Sección de Nómina de Barberos -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-12">
+            <div class="card border-0 rounded-4 p-4 bg-white shadow-sm">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                    <h5 class="fw-bold text-dark mb-0"><i class="fas fa-user-tie text-warning me-2"></i> Nómina y Comisiones de Barberos</h5>
+                    <a href="/pagar_nomina" class="btn btn-success btn-sm fw-bold px-3 py-2 shadow-sm rounded-pill" onclick="return confirm('¿Desea registrar el pago de nómina del día?');">
+                        <i class="fas fa-check-circle me-1"></i> Pagar Nómina del Día
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Barbero</th>
+                                <th class="text-center">Servicios</th>
+                                <th class="text-end">Comisión</th>
+                                <th class="text-end">Propinas</th>
+                                <th class="text-end pe-3 fw-bold">Total a Pagar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in reporte_barberos %}
+                            <tr>
+                                <td class="ps-3 fw-bold text-dark">{{ r[0] }}</td>
+                                <td class="text-center"><span class="badge bg-secondary px-2.5 py-1">{{ r[1] }}</span></td>
+                                <td class="text-end">${{ "%.2f"|format(r[2]) }}</td>
+                                <td class="text-end text-success">${{ "%.2f"|format(r[3]) }}</td>
+                                <td class="text-end pe-3 fw-bold text-primary fs-6">${{ "%.2f"|format(r[4]) }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">No hay registros de barberos activos.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historial General de Transacciones -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-12">
+            <div class="card border-0 rounded-4 p-4 bg-white shadow-sm">
+                <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom"><i class="fas fa-history text-secondary me-2"></i> Historial General de Transacciones</h5>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Fecha</th>
+                                <th>Tipo / Categoría</th>
+                                <th>Descripción</th>
+                                <th>Método</th>
+                                <th class="text-end">Monto</th>
+                                {% if session.get('rol') == 'admin' %}
+                                <th class="text-center pe-3">Acción</th>
                                 {% endif %}
-                                <div class="small fw-semibold text-secondary mt-1">{{ t[6] }}</div>
-                            </td>
-                            <td>{{ t[4] }}</td>
-                            <td><span class="badge bg-light text-dark border px-2 py-1">{{ t[5] }}</span></td>
-                            <td class="text-end fw-bold {% if t[2] == 'ingreso' %}text-success{% else %}text-danger{% endif %}">
-                                {% if t[2] == 'ingreso' %}+{% else %}-{% endif %}${{ "%.2f"|format(t[3]) }}
-                            </td>
-                            {% if session.get('rol') == 'admin' %}
-                            <td class="text-center">
-                                <a href="/eliminar_transaccion/{{ t[0] }}" class="btn btn-outline-danger btn-sm border-0" onclick="return confirm('¿Seguro que deseas eliminar esta transacción?');">
-                                    <i class="fas fa-trash-alt"></i>
-                                </a>
-                            </td>
-                            {% endif %}
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">No hay transacciones registradas.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in transacciones_python %}
+                            <tr>
+                                <td class="ps-3"><small class="text-muted">{{ t[1] }}</small></td>
+                                <td>
+                                    {% if t[2] == 'ingreso' %}
+                                        <span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25 px-2.5 py-1">Ingreso</span>
+                                    {% else %}
+                                        <span class="badge bg-danger bg-opacity-15 text-danger border border-danger border-opacity-25 px-2.5 py-1">Gasto</span>
+                                    {% endif %}
+                                    <div class="small fw-semibold text-secondary mt-1">{{ t[6] }}</div>
+                                </td>
+                                <td>{{ t[4] }}</td>
+                                <td><span class="badge bg-light text-dark border px-2 py-1">{{ t[5] }}</span></td>
+                                <td class="text-end fw-bold {% if t[2] == 'ingreso' %}text-success{% else %}text-danger{% endif %}">
+                                    {% if t[2] == 'ingreso' %}+{% else %}-{% endif %}${{ "%.2f"|format(t[3]) }}
+                                </td>
+                                {% if session.get('rol') == 'admin' %}
+                                <td class="text-center pe-3">
+                                    <a href="/eliminar_transaccion/{{ t[0] }}" class="btn btn-outline-danger btn-sm border-0 py-1.5 px-2 rounded-3" onclick="return confirm('¿Seguro que deseas eliminar esta transacción?');" title="Eliminar transacción">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </a>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">No hay transacciones registradas.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
+
 </div>
 
 <!-- Script Chart.js para la Gráfica de Finanzas -->
